@@ -21,9 +21,11 @@ import com.tkfm.recruitassistant.core.CharacterRepository;
 import com.tkfm.recruitassistant.core.HistoryStore;
 import com.tkfm.recruitassistant.core.MatchEngine;
 import com.tkfm.recruitassistant.core.MatchGroup;
+import com.tkfm.recruitassistant.core.ProphecyEngine;
 import com.tkfm.recruitassistant.util.Ui;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,6 +45,7 @@ public class ManualFragment extends Fragment {
     private TextView btnSave;
 
     private MatchEngine engine;
+    private ProphecyEngine prophecy;
     private HistoryStore history;
     private List<MatchGroup> lastGroups = Collections.emptyList();
     private List<String> lastSelection = new ArrayList<>();
@@ -60,6 +63,7 @@ public class ManualFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         Context context = requireContext();
         engine = new MatchEngine(CharacterRepository.get(context));
+        prophecy = ProphecyEngine.get(context);
         history = new HistoryStore(context);
         picker = view.findViewById(R.id.tagPicker);
         selectedFlow = view.findViewById(R.id.selectedFlow);
@@ -103,17 +107,42 @@ public class ManualFragment extends Fragment {
 
     private void onSelectionChanged(Set<String> selected) {
         if (syncing) return;
-        lastSelection = new ArrayList<>(selected);
-        persist(lastSelection);
-        renderSelectedChips(selected);
-        selectedCount.setText("已选 " + selected.size() + " / 5");
-        selectedHint.setVisibility(selected.isEmpty() ? View.VISIBLE : View.GONE);
+        List<String> ordered = new ArrayList<>(selected);
+        String green = picker.consumeGreenTapped();
+        if (green != null) {
+            List<String> rest = prophecy.completion(ordered);
+            if (!rest.isEmpty()) {
+                LinkedHashSet<String> completed = new LinkedHashSet<>(ordered);
+                completed.addAll(rest);
+                syncing = true;
+                picker.setSelection(completed);
+                syncing = false;
+                applySelection(completed);
+                return;
+            }
+        }
+        applySelection(selected);
+    }
 
-        lastGroups = engine.analyze(selected);
-        resultHeader.setVisibility(selected.isEmpty() ? View.GONE : View.VISIBLE);
+    private void applySelection(Collection<String> selection) {
+        LinkedHashSet<String> ordered = new LinkedHashSet<>(selection);
+        lastSelection = new ArrayList<>(ordered);
+        persist(lastSelection);
+        renderSelectedChips(ordered);
+        selectedCount.setText("已选 " + ordered.size() + " / 5");
+        selectedHint.setVisibility(ordered.isEmpty() ? View.VISIBLE : View.GONE);
+
+        lastGroups = engine.analyze(ordered);
+        resultHeader.setVisibility(ordered.isEmpty() ? View.GONE : View.VISIBLE);
         btnSave.setVisibility(lastGroups.isEmpty() ? View.GONE : View.VISIBLE);
         ResultsRenderer.render(requireContext(), results, lastGroups, lastSelection,
                 this::onCharacterClicked);
+
+        if (ordered.size() >= 5) {
+            picker.setHints(Collections.emptyMap());
+        } else {
+            picker.setHints(prophecy.hints(lastSelection));
+        }
     }
 
     private void renderSelectedChips(Set<String> selected) {

@@ -147,6 +147,14 @@
             android:textColor="@color/text_dim"
             android:textSize="12sp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="绿色 = 唯一下一步，点击补全到 3 个；蓝色 = 其他可能"
+            android:textColor="@color/accent"
+            android:textSize="11.5sp" />
+
         <com.tkfm.recruitassistant.ui.TagPickerView
             android:id="@+id/tagPicker"
             android:layout_width="match_parent"
