@@ -10,4 +10,8 @@
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
     </style>
+
+    <style name="TextAppearance.App.NavLabel" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">10.5sp</item>
+    </style>
 </resources>
