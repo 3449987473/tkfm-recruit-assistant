@@ -1,0 +1,35 @@
+# Gradle / Android build output
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine paths
+local.properties
+
+# Signing material — never commit
+keystore.properties
+keystore/
+*.jks
+*.keystore
+
+# Packaged apps (distributed via GitHub Releases)
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

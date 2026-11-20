@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">全境征才助手</string>
+    <string name="tab_auto">自动识别</string>
+    <string name="tab_manual">手动计算</string>
+    <string name="tab_records">招募记录</string>
+    <string name="menu_rules">规则</string>
+    <string name="menu_about">关于</string>
+    <string name="assistant_service_label">全境征才助手 · 游戏内助手</string>
+    <string name="assistant_service_description">开启后，可在游戏画面内显示悬浮球和结果面板，并在点选结果角色时自动选择词条与招募时间。本服务不读取窗口内容，只使用屏幕截图和无障碍手势。</string>
+</resources>
