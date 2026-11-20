@@ -7,8 +7,7 @@ import android.content.SharedPreferences;
 public final class AssistantSettings {
 
     private static final String PREFS = "assistant";
-    private static final String KEY_AUTO_TAGS = "auto_select_tags";
-    private static final String KEY_AUTO_TIME = "auto_adjust_time";
+    private static final String KEY_AUTO_RUN_ON_SCAN = "auto_run_on_scan";
     private static final String KEY_AUTO_RECRUIT = "auto_click_recruit";
     private static final String KEY_DELAY = "click_delay_ms";
 
@@ -19,12 +18,12 @@ public final class AssistantSettings {
         return context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    public static boolean autoTags(Context context) {
-        return prefs(context).getBoolean(KEY_AUTO_TAGS, true);
-    }
-
-    public static boolean autoTime(Context context) {
-        return prefs(context).getBoolean(KEY_AUTO_TIME, true);
+    /**
+     * When enabled a scan immediately selects tags/time for the best group; otherwise the
+     * result sheet waits for the user to tap a group.  Leader groups never auto-run.
+     */
+    public static boolean autoRunOnScan(Context context) {
+        return prefs(context).getBoolean(KEY_AUTO_RUN_ON_SCAN, false);
     }
 
     /** Off by default: tapping a result must never spend recruit resources without consent. */
@@ -36,12 +35,8 @@ public final class AssistantSettings {
         return prefs(context).getInt(KEY_DELAY, 150);
     }
 
-    public static void setAutoTags(Context context, boolean value) {
-        prefs(context).edit().putBoolean(KEY_AUTO_TAGS, value).apply();
-    }
-
-    public static void setAutoTime(Context context, boolean value) {
-        prefs(context).edit().putBoolean(KEY_AUTO_TIME, value).apply();
+    public static void setAutoRunOnScan(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_AUTO_RUN_ON_SCAN, value).apply();
     }
 
     public static void setAutoRecruit(Context context, boolean value) {

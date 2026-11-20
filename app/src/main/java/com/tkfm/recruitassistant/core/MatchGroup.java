@@ -59,4 +59,18 @@ public final class MatchGroup {
         if (isRecommended()) return "推荐";
         return characters.size() + " 名候选";
     }
+
+    /** One-line outcome shown after a fully automatic recruit. */
+    public String resultSummary() {
+        if (characters.isEmpty()) return "没有匹配角色";
+        if (isUnique()) {
+            Character only = characters.get(0);
+            String tier = only.star == 3 ? "SSR" : only.star == 2 ? "SR" : only.star + "★";
+            return "已按「必出 " + tier + "：" + only.name + "」组合招募";
+        }
+        if (isRecommended()) {
+            return "已按「全 SR 以上，" + characters.size() + " 名候选」组合招募";
+        }
+        return "已按「最高 " + maxStar() + "★，" + characters.size() + " 名候选」组合招募";
+    }
 }

@@ -28,6 +28,8 @@ import com.tkfm.recruitassistant.core.MatchEngine;
 import com.tkfm.recruitassistant.core.MatchGroup;
 import com.tkfm.recruitassistant.core.OcrAnalyzer;
 import com.tkfm.recruitassistant.core.TagCatalog;
+import com.tkfm.recruitassistant.core.WorkflowPolicy;
+import com.tkfm.recruitassistant.util.Ui;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -57,6 +59,11 @@ public class AssistantAccessibilityService extends AccessibilityService
     private SharedPreferences prefs;
     private BroadcastReceiver projectionReceiver;
     private int clickDelayMs = 150;
+
+    /** Screen box of the in-game recruit button, cached for the in-sheet recruit action. */
+    private volatile AutoSelectPlanner.Box lastStartBox;
+    /** True when the latest scan contained the leader tag: never auto-run or auto-recruit. */
+    private volatile boolean leaderScenario;
 
     public static AssistantAccessibilityService get() {
         return instance;
@@ -156,14 +163,31 @@ public class AssistantAccessibilityService extends AccessibilityService
             openMain();
             return;
         }
-        boolean autoTags = AssistantSettings.autoTags(AssistantAccessibilityService.this);
-        boolean autoTime = AssistantSettings.autoTime(AssistantAccessibilityService.this);
-        boolean autoRecruit = AssistantSettings.autoRecruit(AssistantAccessibilityService.this);
-        if (!autoTags && !autoTime && !autoRecruit) {
-            toast("自动点选已关闭，可在「助手设置」中开启");
+        // Leader groups always leave the final recruit tap to the user.
+        boolean recruit = AssistantSettings.autoRecruit(this) && !leaderScenario;
+        execute(group, recruit, false, null, null);
+    }
+
+    @Override
+    public void onRecruitRequested() {
+        if (busy.get()) return;
+        AutoSelectPlanner.Box box = lastStartBox;
+        if (box == null) {
+            toast("未定位到开始招募按钮，请手动按");
             return;
         }
-        autoSelect(group);
+        if (!busy.compareAndSet(false, true)) return;
+        overlay.hideAll();
+        toast("正在点击开始招募…");
+        main.postDelayed(() -> dispatchTaps(
+                java.util.Collections.singletonList(
+                        new AutoSelectPlanner.Tap(box.centerX(), box.centerY(), "recruit")),
+                () -> {
+                    busy.set(false);
+                    overlay.setButtonBusy(false);
+                    overlay.showButton();
+                    overlay.toastLong("已点击开始招募");
+                }), 150);
     }
 
     @Override
@@ -177,15 +201,18 @@ public class AssistantAccessibilityService extends AccessibilityService
 
     private void startAnalysis() {
         if (!busy.compareAndSet(false, true)) return;
+        leaderScenario = false;
         overlay.setButtonBusy(true);
         overlay.hideAll();
         toast("正在识别征才词条…");
+        // Modes 2/4 act immediately after the scan, so the start button must be located now.
+        final boolean autoRun = AssistantSettings.autoRunOnScan(this);
         main.postDelayed(() -> ProjectionService.capture((bitmap, error) -> {
             if (bitmap == null) {
                 finish("抓屏失败：" + (error == null ? "未知错误" : error));
                 return;
             }
-            OcrAnalyzer.recognize(this, bitmap, new OcrAnalyzer.Callback() {
+            OcrAnalyzer.recognize(this, bitmap, autoRun, new OcrAnalyzer.Callback() {
                 @Override
                 public void onResult(OcrAnalyzer.OcrResult result) {
                     List<OcrAnalyzer.DetectedTag> detected = filterTags(result, bitmap);
@@ -206,8 +233,50 @@ public class AssistantAccessibilityService extends AccessibilityService
                     history.add("自动", tags, groups);
                     busy.set(false);
                     overlay.setButtonBusy(false);
-                    overlay.showPanel(groups, tags);
-                    Log.i(TAG, "analysis groups=" + groups.size());
+
+                    leaderScenario = WorkflowPolicy.containsLeader(tags);
+                    boolean autoRecruit = AssistantSettings.autoRecruit(
+                            AssistantAccessibilityService.this);
+                    WorkflowPolicy.Action action =
+                            WorkflowPolicy.decide(autoRun, autoRecruit, tags);
+                    lastStartBox = toBox(result.startButtonBox);
+
+                    AssistantOverlay.PanelSpec spec = new AssistantOverlay.PanelSpec();
+                    spec.showRecruit = action == WorkflowPolicy.Action.AUTO_SELECT_CONFIRM
+                            && !leaderScenario;
+                    spec.recruitEnabled = lastStartBox != null;
+                    if (leaderScenario) {
+                        spec.hint = "含领袖词条，请手动点结果；最后一步请手动按招募";
+                        spec.hintColor = Ui.withAlpha(Ui.RED, 0xDD);
+                    } else if (action == WorkflowPolicy.Action.AUTO_SELECT_CONFIRM) {
+                        spec.hint = spec.recruitEnabled
+                                ? "已自动选好词条和时间，点上方「开始招募」"
+                                : "未定位到开始招募按钮，请手动按";
+                        spec.hintColor = spec.recruitEnabled
+                                ? Ui.TEXT_DIM : Ui.withAlpha(Ui.RED, 0xDD);
+                    } else if (action == WorkflowPolicy.Action.AUTO_SELECT_AND_RECRUIT) {
+                        spec.hint = "正在自动选词条/时间并招募…";
+                    } else {
+                        spec.hint = autoRecruit
+                                ? "点角色 = 自动改词条/时间并开始招募"
+                                : "点角色 = 自动改词条/时间；招募键仍需自己按";
+                    }
+                    overlay.showPanel(groups, spec);
+                    Log.i(TAG, "analysis groups=" + groups.size()
+                            + " action=" + action + " leader=" + leaderScenario);
+
+                    if (leaderScenario) {
+                        overlay.toast("含领袖词条，请手动选择结果");
+                        return;
+                    }
+                    if (action == WorkflowPolicy.Action.SHOW_ONLY) {
+                        return;
+                    }
+                    if (groups.isEmpty()) {
+                        overlay.toast("没有匹配角色");
+                        return;
+                    }
+                    execute(groups.get(0), autoRecruit, true, bitmap, result);
                 }
 
                 @Override
@@ -219,93 +288,35 @@ public class AssistantAccessibilityService extends AccessibilityService
         }), 260);
     }
 
-    private void autoSelect(MatchGroup group) {
+    /**
+     * Runs the tap plan for one group.
+     *
+     * @param recruit  click the in-game recruit button after selecting tags/time
+     * @param fromScan true for modes 2/4 (keep the result sheet during execution)
+     * @param cachedBitmap / cachedResult reuse the scan frame instead of capturing again
+     */
+    private void execute(MatchGroup group, boolean recruit, boolean fromScan,
+                         Bitmap cachedBitmap, OcrAnalyzer.OcrResult cachedResult) {
         if (!busy.compareAndSet(false, true)) return;
-        overlay.hideAll();
-        toast("正在点选：" + group.comboText());
-        final boolean autoTags = AssistantSettings.autoTags(this);
-        final boolean autoTime = AssistantSettings.autoTime(this);
-        final boolean autoRecruit = AssistantSettings.autoRecruit(this);
+        if (!fromScan) {
+            overlay.hideAll();
+            toast("正在点选：" + group.comboText());
+        }
+        if (cachedBitmap != null && cachedResult != null) {
+            // Acting within a second of the scan: the frame is still valid, skip a second OCR.
+            main.postDelayed(() -> applyPlan(group, recruit, fromScan,
+                    cachedBitmap, cachedResult), 120);
+            return;
+        }
         main.postDelayed(() -> ProjectionService.capture((bitmap, error) -> {
             if (bitmap == null) {
                 finish("抓屏失败：" + (error == null ? "未知错误" : error));
                 return;
             }
-            OcrAnalyzer.recognize(this, bitmap, autoRecruit, new OcrAnalyzer.Callback() {
+            OcrAnalyzer.recognize(this, bitmap, recruit, new OcrAnalyzer.Callback() {
                 @Override
                 public void onResult(OcrAnalyzer.OcrResult result) {
-                    List<AutoSelectPlanner.TagHit> hits = new ArrayList<>();
-                    Set<String> selected = new LinkedHashSet<>();
-                    for (OcrAnalyzer.DetectedTag tag : filterTags(result, bitmap)) {
-                        hits.add(new AutoSelectPlanner.TagHit(tag.tag,
-                                new AutoSelectPlanner.Box(tag.box.left, tag.box.top,
-                                        tag.box.right, tag.box.bottom)));
-                        boolean on = isTagSelected(bitmap, tag.box);
-                        if (on) selected.add(tag.tag);
-                        Log.d(TAG, "probe " + tag.tag + " raw=" + tag.raw
-                                + " box=" + tag.box + " selected=" + on);
-                    }
-                    OcrAnalyzer.TimeMark time = pickTime(result.times, bitmap.getHeight());
-                    Integer hour = time == null ? null : time.value;
-                    AutoSelectPlanner.Box timeBox = time == null ? null
-                            : new AutoSelectPlanner.Box(time.box.left, time.box.top,
-                                    time.box.right, time.box.bottom);
-                    AutoSelectPlanner.Plan plan = AutoSelectPlanner.build(
-                            group.combo, hits, selected, hour, timeBox, autoTime, autoTags);
-                    android.graphics.Rect startBox = result.startButtonBox;
-                    Log.i(TAG, "selected=" + selected + " hour=" + hour
-                            + " autoTags=" + autoTags + " autoTime=" + autoTime
-                            + " autoRecruit=" + autoRecruit + " startBox=" + startBox
-                            + " plan=" + plan.summary() + " taps=" + plan.taps);
-                    if (autoTags && !plan.missing.isEmpty()) {
-                        Log.w(TAG, "missing tag boxes: " + plan.missing);
-                        finish("没有找到词条位置：" + plan.missing);
-                        return;
-                    }
-                    if (plan.taps.isEmpty() && !autoRecruit) {
-                        finish("当前已经是目标条件");
-                        return;
-                    }
-                    Runnable done = () -> {
-                        busy.set(false);
-                        overlay.setButtonBusy(false);
-                        overlay.showButton();
-                        String suffix = plan.timeAdjusted ? "，时间已调到 09:00" : "";
-                        String prefix = autoTags ? "已选好 " + group.comboText() : "已调整时间";
-                        toast(prefix + suffix + "，请按招募");
-                    };
-                    if (autoRecruit && startBox != null) {
-                        Runnable recruit = () -> dispatchTaps(
-                                java.util.Collections.singletonList(
-                                        new AutoSelectPlanner.Tap(startBox.centerX(),
-                                                startBox.centerY(), "recruit")),
-                                () -> {
-                                    busy.set(false);
-                                    overlay.setButtonBusy(false);
-                                    overlay.showButton();
-                                    toast("已点击开始招募");
-                                });
-                        if (plan.taps.isEmpty()) {
-                            main.postDelayed(recruit, 300);
-                        } else {
-                            dispatchTaps(plan.taps, () -> main.postDelayed(recruit, 500));
-                        }
-                    } else if (autoRecruit) {
-                        Log.w(TAG, "start button not found, auto-recruit skipped");
-                        if (plan.taps.isEmpty()) {
-                            finish("未找到开始招募按钮，请手动按");
-                        } else {
-                            dispatchTaps(plan.taps, () -> {
-                                busy.set(false);
-                                overlay.setButtonBusy(false);
-                                overlay.showButton();
-                                String suffix = plan.timeAdjusted ? "，时间已调到 09:00" : "";
-                                toast("已选好" + suffix + "，未找到开始招募按钮，请手动按");
-                            });
-                        }
-                    } else {
-                        dispatchTaps(plan.taps, done);
-                    }
+                    applyPlan(group, recruit, fromScan, bitmap, result);
                 }
 
                 @Override
@@ -315,6 +326,88 @@ public class AssistantAccessibilityService extends AccessibilityService
                 }
             });
         }), 260);
+    }
+
+    private void applyPlan(MatchGroup group, boolean recruit, boolean fromScan,
+                           Bitmap bitmap, OcrAnalyzer.OcrResult result) {
+        List<AutoSelectPlanner.TagHit> hits = new ArrayList<>();
+        Set<String> selected = new LinkedHashSet<>();
+        for (OcrAnalyzer.DetectedTag tag : filterTags(result, bitmap)) {
+            hits.add(new AutoSelectPlanner.TagHit(tag.tag,
+                    new AutoSelectPlanner.Box(tag.box.left, tag.box.top,
+                            tag.box.right, tag.box.bottom)));
+            boolean on = isTagSelected(bitmap, tag.box);
+            if (on) selected.add(tag.tag);
+            Log.d(TAG, "probe " + tag.tag + " raw=" + tag.raw
+                    + " box=" + tag.box + " selected=" + on);
+        }
+        OcrAnalyzer.TimeMark time = pickTime(result.times, bitmap.getHeight());
+        Integer hour = time == null ? null : time.value;
+        AutoSelectPlanner.Box timeBox = time == null ? null
+                : new AutoSelectPlanner.Box(time.box.left, time.box.top,
+                        time.box.right, time.box.bottom);
+        AutoSelectPlanner.Plan plan = AutoSelectPlanner.build(
+                group.combo, hits, selected, hour, timeBox, true, true);
+        AutoSelectPlanner.Box startBox = toBox(result.startButtonBox);
+        if (startBox != null) lastStartBox = startBox;
+        Log.i(TAG, "selected=" + selected + " hour=" + hour
+                + " recruit=" + recruit + " fromScan=" + fromScan
+                + " startBox=" + startBox + " plan=" + plan.summary()
+                + " taps=" + plan.taps);
+        if (!plan.missing.isEmpty()) {
+            Log.w(TAG, "missing tag boxes: " + plan.missing);
+            finish("没有找到词条位置：" + plan.missing);
+            return;
+        }
+        if (plan.taps.isEmpty() && !recruit) {
+            complete(group, false, fromScan, false);
+            return;
+        }
+        Runnable recruitTap = () -> dispatchTaps(
+                java.util.Collections.singletonList(
+                        new AutoSelectPlanner.Tap(startBox.centerX(), startBox.centerY(), "recruit")),
+                () -> complete(group, true, fromScan, true));
+        if (recruit && startBox != null) {
+            if (plan.taps.isEmpty()) {
+                main.postDelayed(recruitTap, 300);
+            } else {
+                dispatchTaps(plan.taps, () -> main.postDelayed(recruitTap, 500));
+            }
+        } else {
+            dispatchTaps(plan.taps, () -> complete(group, recruit, fromScan, false));
+        }
+    }
+
+    private void complete(MatchGroup group, boolean recruit, boolean fromScan, boolean recruited) {
+        busy.set(false);
+        overlay.setButtonBusy(false);
+        if (fromScan) {
+            if (recruit) {
+                // Mode 4: collapse the sheet and report the outcome.
+                overlay.hidePanel();
+                overlay.toastLong(recruited ? group.resultSummary()
+                        : "已选好词条和时间，未找到开始招募按钮，请手动按");
+            } else if (lastStartBox != null) {
+                // Mode 2: sheet stays open, the recruit button is the next step.
+                overlay.toast("已选好词条和时间，点上方「开始招募」");
+            } else {
+                overlay.toast("已选好词条和时间，未定位到开始招募按钮，请手动按");
+            }
+            return;
+        }
+        overlay.showButton();
+        if (recruited) {
+            overlay.toastLong("已点击开始招募");
+        } else if (recruit) {
+            overlay.toast("未找到开始招募按钮，请手动按");
+        } else {
+            overlay.toast("已选好词条和时间，请按招募");
+        }
+    }
+
+    private static AutoSelectPlanner.Box toBox(Rect rect) {
+        if (rect == null) return null;
+        return new AutoSelectPlanner.Box(rect.left, rect.top, rect.right, rect.bottom);
     }
 
     /**

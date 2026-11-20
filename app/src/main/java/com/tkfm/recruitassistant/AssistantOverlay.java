@@ -45,6 +45,16 @@ public class AssistantOverlay {
         void onCharacterSelected(MatchGroup group);
 
         void onDelayChanged(int delayMs);
+
+        void onRecruitRequested();
+    }
+
+    /** What the result sheet shows below the header. */
+    public static final class PanelSpec {
+        public String hint = "";
+        public int hintColor = Ui.TEXT_DIM;
+        public boolean showRecruit;
+        public boolean recruitEnabled = true;
     }
 
     private static final String PREFS = "assistant";
@@ -131,10 +141,10 @@ public class AssistantOverlay {
         }
     }
 
-    public void showPanel(List<MatchGroup> groups, List<String> tags) {
+    public void showPanel(List<MatchGroup> groups, PanelSpec spec) {
         hideButton();
         removePanel();
-        panelView = buildPanel(groups);
+        panelView = buildPanel(groups, spec);
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 Math.round(screenHeight * 0.48f),
@@ -168,6 +178,13 @@ public class AssistantOverlay {
     public void toast(String text) {
         try {
             Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void toastLong(String text) {
+        try {
+            Toast.makeText(context, text, Toast.LENGTH_LONG).show();
         } catch (Exception ignored) {
         }
     }
@@ -272,7 +289,7 @@ public class AssistantOverlay {
         buttonView = box;
     }
 
-    private View buildPanel(List<MatchGroup> groups) {
+    private View buildPanel(List<MatchGroup> groups, PanelSpec spec) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable bg = new GradientDrawable();
@@ -297,6 +314,30 @@ public class AssistantOverlay {
         titles.addView(Ui.text(context, groups.size() + " 组组合 · " + unique + " 名候选",
                 10.5f, Ui.TEXT_DIM, false));
         header.addView(titles, Ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+
+        if (spec.showRecruit) {
+            TextView recruit = Ui.text(context, "开始招募", 10.5f, Ui.ACCENT, true);
+            recruit.setGravity(Gravity.CENTER);
+            recruit.setPadding(dp(10), dp(5), dp(10), dp(5));
+            recruit.setBackground(Ui.ripple(context, Ui.withAlpha(Ui.ACCENT, 0x1C),
+                    Ui.withAlpha(Ui.ACCENT, 0x66), 9));
+            if (!spec.recruitEnabled) {
+                recruit.setEnabled(false);
+                recruit.setAlpha(0.4f);
+            } else {
+                recruit.setOnClickListener(v -> {
+                    v.setEnabled(false);
+                    v.setAlpha(0.6f);
+                    ((TextView) v).setText("招募中…");
+                    listener.onRecruitRequested();
+                });
+            }
+            LinearLayout.LayoutParams recruitLp = Ui.lp(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            recruitLp.setMarginEnd(dp(5));
+            header.addView(recruit, recruitLp);
+        }
 
         TextView delay = Ui.text(context, delayMs + "ms", 10.5f, Ui.PRIMARY, true);
         delay.setGravity(Gravity.CENTER);
@@ -348,8 +389,7 @@ public class AssistantOverlay {
             }
         }
 
-        TextView hint = Ui.text(context,
-                "点角色 = 自动改词条/时间；招募键仍需自己按", 10.5f, Ui.TEXT_DIM, false);
+        TextView hint = Ui.text(context, spec.hint, 10.5f, spec.hintColor, false);
         hint.setPadding(dp(2), dp(2), dp(2), dp(2));
         root.addView(hint);
         return root;

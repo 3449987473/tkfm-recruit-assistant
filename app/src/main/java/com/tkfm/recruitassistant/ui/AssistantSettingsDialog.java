@@ -13,7 +13,10 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.tkfm.recruitassistant.AssistantSettings;
 import com.tkfm.recruitassistant.util.Ui;
 
-/** Assistant behaviour switches: tags, time, auto-recruit and click delay. */
+/**
+ * Assistant behaviour: the two workflow dimensions (run on scan, auto recruit), the click
+ * interval, and the leader exception.  "Select tags/time" is always on.
+ */
 public final class AssistantSettingsDialog {
 
     private AssistantSettingsDialog() {
@@ -25,25 +28,21 @@ public final class AssistantSettingsDialog {
         LinearLayout content = Ui.vertical(context);
         content.setPadding(Ui.dp(context, 20), Ui.dp(context, 6), Ui.dp(context, 20), 0);
 
-        SwitchMaterial tags = new SwitchMaterial(context);
-        tags.setText("自动点选词条");
-        tags.setChecked(AssistantSettings.autoTags(context));
-        content.addView(tags);
-        content.addView(hint(context, "点结果角色时，自动补选/取消该组合的词条。"));
-
-        SwitchMaterial time = new SwitchMaterial(context);
-        time.setText("自动调整招募时间（09:00）");
-        time.setChecked(AssistantSettings.autoTime(context));
-        content.addView(time);
-        content.addView(hint(context, "按最短路径把时间调到 09:00：当前 <5 点下箭头，≥5 点上箭头。"));
+        SwitchMaterial runOnScan = new SwitchMaterial(context);
+        runOnScan.setText("扫描后立即执行");
+        runOnScan.setChecked(AssistantSettings.autoRunOnScan(context));
+        content.addView(runOnScan);
+        content.addView(hint(context,
+                "点悬浮球扫描后，直接按最优结果自动点选词条和招募时间。"
+                        + "含「领袖」词条时不会自动执行。"));
 
         SwitchMaterial recruit = new SwitchMaterial(context);
         recruit.setText("自动点击「开始招募」");
         recruit.setChecked(AssistantSettings.autoRecruit(context));
         content.addView(recruit);
         TextView recruitHint = hint(context,
-                "开启后，点结果角色会在选好词条/时间后自动点击游戏里的「开始招募」，"
-                        + "会消耗招募资源。默认关闭。");
+                "选好词条/时间后自动点游戏里的「开始招募」，每次消耗一张招募券。"
+                        + "含「领袖」时始终不自动招募。");
         recruitHint.setTextColor(Ui.withAlpha(Ui.RED, 0xDD));
         content.addView(recruitHint);
 
@@ -64,8 +63,15 @@ public final class AssistantSettingsDialog {
         }
         delaySpinner.setSelection(selected);
         content.addView(delaySpinner);
-        content.addView(hint(context,
-                "词条/时间/开始招募全部关闭时，点结果角色不会执行任何自动操作。"));
+        content.addView(hint(context, "词条和时间始终自动点选。"));
+
+        TextView leaderNote = Ui.text(context,
+                "※ 含「领袖」词条时：扫描后不会自动点选，需手动点击结果；\n"
+                        + "无论哪种模式，最后一步「开始招募」都需手动按。",
+                11.5f, Ui.withAlpha(Ui.RED, 0xDD), false);
+        leaderNote.setLineSpacing(Ui.dp(context, 2), 1f);
+        leaderNote.setPadding(0, Ui.dp(context, 12), 0, Ui.dp(context, 4));
+        content.addView(leaderNote);
 
         ScrollView scroll = new ScrollView(context);
         scroll.addView(content);
@@ -77,22 +83,19 @@ public final class AssistantSettingsDialog {
                 .setPositiveButton("保存", (dialog, which) -> {
                     int index = Math.max(0, Math.min(values.length - 1,
                             delaySpinner.getSelectedItemPosition()));
-                    save(context, tags.isChecked(), time.isChecked(),
-                            recruit.isChecked(), values[index]);
+                    save(context, runOnScan.isChecked(), recruit.isChecked(), values[index]);
                 })
                 .show();
     }
 
-    private static void save(Context context, boolean autoTags, boolean autoTime,
-                             boolean autoRecruit, int delay) {
-        AssistantSettings.setAutoTags(context, autoTags);
-        AssistantSettings.setAutoTime(context, autoTime);
+    private static void save(Context context, boolean runOnScan, boolean autoRecruit, int delay) {
         AssistantSettings.setDelay(context, delay);
+        AssistantSettings.setAutoRunOnScan(context, runOnScan);
         if (autoRecruit && !AssistantSettings.autoRecruit(context)) {
             new MaterialAlertDialogBuilder(context)
                     .setTitle("开启自动开始招募？")
-                    .setMessage("开启后，点击结果角色会直接点击游戏里的「开始招募」，"
-                            + "每次都会消耗招募资源。\n\n确认要开启吗？")
+                    .setMessage("开启后，选好词条/时间会直接点击游戏里的「开始招募」，"
+                            + "每次都会消耗一张招募券。\n\n确认要开启吗？")
                     .setNegativeButton("保持关闭", (d, w) -> {
                         AssistantSettings.setAutoRecruit(context, false);
                         toast(context, "自动招募保持关闭");
