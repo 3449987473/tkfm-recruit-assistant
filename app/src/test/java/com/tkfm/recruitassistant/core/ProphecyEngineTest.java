@@ -63,15 +63,17 @@ public class ProphecyEngineTest {
 
     @Test
     public void completionReturnsRemainingTagsOfFirstRecipe() {
-        assertEquals(Collections.singletonList("美乳"),
+        assertEquals(Arrays.asList("美乳", "回复", "支援"),
                 engine().completion(Arrays.asList("攻击者", "人类")));
-        assertEquals(Arrays.asList("魔族", "巨乳"),
+        assertEquals(Arrays.asList("魔族", "巨乳", "输出", "领袖"),
                 engine().completion(Collections.singletonList("攻击者")));
     }
 
     @Test
-    public void completionStopsAtThreeConditions() {
+    public void completionFillsUpToFiveTags() {
+        assertEquals(Collections.singletonList("领袖"),
+                engine().completion(Arrays.asList("攻击者", "魔族", "巨乳", "输出")));
         assertTrue(engine().completion(
-                Arrays.asList("攻击者", "魔族", "巨乳")).isEmpty());
+                Arrays.asList("攻击者", "魔族", "巨乳", "输出", "领袖")).isEmpty());
     }
 }

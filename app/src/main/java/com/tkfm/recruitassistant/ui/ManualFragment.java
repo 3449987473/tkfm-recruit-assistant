@@ -132,7 +132,7 @@ public class ManualFragment extends Fragment {
         ResultsRenderer.render(requireContext(), results, lastGroups, lastSelection,
                 this::onCharacterClicked);
 
-        if (ordered.size() >= ProphecyEngine.MAX_CONDITIONS) {
+        if (ordered.size() >= ProphecyEngine.PANEL_TAGS) {
             picker.setHints(Collections.emptyMap());
         } else {
             picker.setHints(prophecy.hints(lastSelection));

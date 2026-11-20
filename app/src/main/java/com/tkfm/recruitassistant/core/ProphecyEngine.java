@@ -23,8 +23,8 @@ public final class ProphecyEngine {
     public static final int HINT_BLUE = 1;
     public static final int HINT_GREEN = 2;
 
-    /** The game lets the player pick at most three conditions, so completion stops there. */
-    public static final int MAX_CONDITIONS = 3;
+    /** The panel always shows five tags; the player then picks at most three conditions. */
+    public static final int PANEL_TAGS = 5;
 
     private static ProphecyEngine instance;
 
@@ -103,14 +103,12 @@ public final class ProphecyEngine {
         return out;
     }
 
-    /** Remaining tags of the first matching recipe, capped at the game's three conditions. */
+    /** Remaining tags of the first matching recipe: fills the panel's five tags. */
     public List<String> completion(List<String> selectedInOrder) {
         List<List<String>> matches = matches(selectedInOrder);
         if (matches.isEmpty()) return Collections.emptyList();
         List<String> recipe = matches.get(0);
-        int end = Math.min(recipe.size(), MAX_CONDITIONS);
-        if (selectedInOrder.size() >= end) return Collections.emptyList();
-        return new ArrayList<>(recipe.subList(selectedInOrder.size(), end));
+        return new ArrayList<>(recipe.subList(selectedInOrder.size(), recipe.size()));
     }
 
     public int recipeCount() {
