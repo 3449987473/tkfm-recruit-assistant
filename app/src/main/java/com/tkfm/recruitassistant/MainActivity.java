@@ -54,10 +54,6 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
         toolbar.inflateMenu(R.menu.toolbar_main);
         toolbar.setOnMenuItemClickListener(this);
         bottomNav = findViewById(R.id.bottomNav);
-        int navWidth = getResources().getDisplayMetrics().widthPixels * 2 / 3;
-        android.view.ViewGroup.LayoutParams navParams = bottomNav.getLayoutParams();
-        navParams.width = navWidth;
-        bottomNav.setLayoutParams(navParams);
         bottomNav.setOnItemSelectedListener(this::onNavItemSelected);
         showTab(0);
         handleIntent(getIntent());
