@@ -227,13 +227,15 @@ public class AssistantOverlay {
      */
     public void showBanner(String text) {
         removeBanner();
-        TextView view = Ui.text(context, text, 12.5f, Ui.TEXT, false);
+        boolean guaranteed = text != null && text.contains("必出");
+        TextView view = Ui.text(context, text, 12.5f,
+                guaranteed ? 0xFFC0392B : 0xFF1F2430, guaranteed);
         view.setGravity(Gravity.CENTER);
         view.setPadding(dp(16), dp(10), dp(16), dp(10));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xF20D1322);
+        bg.setColor(0xFFF4F6FB);
         bg.setCornerRadius(dp(14));
-        bg.setStroke(dp(1), Ui.STROKE);
+        bg.setStroke(dp(1), 0xFFCBD3E3);
         view.setBackground(bg);
         view.setElevation(dp(10));
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
@@ -245,7 +247,7 @@ public class AssistantOverlay {
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        params.y = dp(150);
+        params.y = dp(100);
         try {
             windowManager.addView(view, params);
             bannerView = view;
