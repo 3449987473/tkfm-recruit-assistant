@@ -115,13 +115,6 @@ public class TagPickerView extends LinearLayout {
     private void build() {
         int gap = Ui.dp(getContext(), 6);
         for (String group : catalog.groupOrder()) {
-            TextView title = Ui.text(getContext(), group, 11,
-                    Ui.withAlpha(Ui.TEXT_DIM, 0xCC), false);
-            title.setLetterSpacing(0.05f);
-            title.setPadding(Ui.dp(getContext(), 2), Ui.dp(getContext(), 13), 0,
-                    Ui.dp(getContext(), 5));
-            addView(title);
-
             List<String> tags = catalog.tagsInGroup(group);
             for (int i = 0; i < tags.size(); i += 3) {
                 LinearLayout row = new LinearLayout(getContext());

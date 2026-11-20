@@ -37,9 +37,7 @@ public class ManualFragment extends Fragment {
     private static final String KEY_TAGS = "tags";
 
     private TagPickerView picker;
-    private FlowLayout selectedFlow;
     private TextView selectedCount;
-    private TextView selectedHint;
     private LinearLayout resultHeader;
     private LinearLayout results;
     private TextView btnSave;
@@ -66,9 +64,7 @@ public class ManualFragment extends Fragment {
         prophecy = ProphecyEngine.get(context);
         history = new HistoryStore(context);
         picker = view.findViewById(R.id.tagPicker);
-        selectedFlow = view.findViewById(R.id.selectedFlow);
         selectedCount = view.findViewById(R.id.selectedCount);
-        selectedHint = view.findViewById(R.id.selectedHint);
         resultHeader = view.findViewById(R.id.resultHeader);
         results = view.findViewById(R.id.resultsContainer);
         btnSave = view.findViewById(R.id.btnSave);
@@ -128,9 +124,7 @@ public class ManualFragment extends Fragment {
         LinkedHashSet<String> ordered = new LinkedHashSet<>(selection);
         lastSelection = new ArrayList<>(ordered);
         persist(lastSelection);
-        renderSelectedChips(ordered);
         selectedCount.setText("已选 " + ordered.size() + " / 5");
-        selectedHint.setVisibility(ordered.isEmpty() ? View.VISIBLE : View.GONE);
 
         lastGroups = engine.analyze(ordered);
         resultHeader.setVisibility(ordered.isEmpty() ? View.GONE : View.VISIBLE);
@@ -138,34 +132,10 @@ public class ManualFragment extends Fragment {
         ResultsRenderer.render(requireContext(), results, lastGroups, lastSelection,
                 this::onCharacterClicked);
 
-        if (ordered.size() >= 5) {
+        if (ordered.size() >= ProphecyEngine.MAX_CONDITIONS) {
             picker.setHints(Collections.emptyMap());
         } else {
             picker.setHints(prophecy.hints(lastSelection));
-        }
-    }
-
-    private void renderSelectedChips(Set<String> selected) {
-        selectedFlow.removeAllViews();
-        for (String tag : selected) {
-            TextView chip = Ui.pill(requireContext(), tag + "  ×", 0xFFE3EAFF, 0xFF253158,
-                    Ui.withAlpha(Ui.PRIMARY, 0x99), 9);
-            chip.setPadding(Ui.dp(requireContext(), 10), Ui.dp(requireContext(), 5),
-                    Ui.dp(requireContext(), 10), Ui.dp(requireContext(), 5));
-            chip.setOnClickListener(v -> {
-                LinkedHashSet<String> next = new LinkedHashSet<>(picker.getSelection());
-                next.remove(tag);
-                syncing = true;
-                picker.setSelection(next);
-                syncing = false;
-                onSelectionChanged(next);
-            });
-            selectedFlow.addView(chip);
-        }
-        if (selected.isEmpty()) {
-            selectedFlow.setVisibility(View.GONE);
-        } else {
-            selectedFlow.setVisibility(View.VISIBLE);
         }
     }
 
