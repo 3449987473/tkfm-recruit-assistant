@@ -12,10 +12,10 @@
 
 ## 下载
 
-在仓库右侧的 **Releases** 页面下载最新 `*-release.apk`（已签名，minSdk 23 / Android 6.0+），校验值随 Release 说明提供。
+在仓库右侧的 **Releases** 页面下载 `tkfm-recruit-assistant-x.y.z-release.apk`（已签名，minSdk 23 / Android 6.0+），SHA-256 随 Release 说明提供。
 
 ```bash
-adb install -r 全境征才助手-x.y.z-release.apk
+adb install -r tkfm-recruit-assistant-1.1.3-release.apk
 ```
 
 ## 使用
