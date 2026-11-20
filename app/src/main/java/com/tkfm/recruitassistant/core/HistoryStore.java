@@ -21,6 +21,8 @@ public final class HistoryStore {
         public String bestCombo = "";
         public String bestResult = "";
         public int bestStar;
+        /** "必出 SR" / "最低 1★" …; empty for records written before 1.1.4. */
+        public String guarantee = "";
 
         public String summary() {
             if (bestResult.isEmpty()) return "无匹配结果";
@@ -30,12 +32,26 @@ public final class HistoryStore {
 
     private static final String PREFS = "recruit_history";
     private static final String KEY = "records";
-    private static final int MAX = 80;
+    private static final String KEY_MAX = "max_records";
+    private static final int DEFAULT_MAX = 80;
 
     private final SharedPreferences prefs;
 
     public HistoryStore(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    /** 0 means unlimited. */
+    public static int getMax(Context context) {
+        return context.getApplicationContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getInt(KEY_MAX, DEFAULT_MAX);
+    }
+
+    public static void setMax(Context context, int value) {
+        context.getApplicationContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putInt(KEY_MAX, value).apply();
     }
 
     public void add(String mode, List<String> tags, List<MatchGroup> groups) {
@@ -51,6 +67,9 @@ public final class HistoryStore {
             MatchGroup best = groups.get(0);
             record.bestCombo = best.comboText();
             record.bestStar = best.maxStar();
+            int minStar = best.minStar();
+            record.guarantee = minStar >= 3 ? "必出 SSR"
+                    : minStar == 2 ? "必出 SR" : "最低 " + minStar + "★";
             StringBuilder sb = new StringBuilder();
             int shown = Math.min(4, best.characters.size());
             for (int i = 0; i < shown; i++) {
@@ -63,7 +82,8 @@ public final class HistoryStore {
         }
         List<Record> all = list();
         all.add(0, record);
-        while (all.size() > MAX) all.remove(all.size() - 1);
+        int max = prefs.getInt(KEY_MAX, DEFAULT_MAX);
+        while (max > 0 && all.size() > max) all.remove(all.size() - 1);
         save(all);
     }
 
@@ -86,6 +106,7 @@ public final class HistoryStore {
                 r.bestCombo = o.optString("bestCombo", "");
                 r.bestResult = o.optString("bestResult", "");
                 r.bestStar = o.optInt("bestStar");
+                r.guarantee = o.optString("guarantee", "");
                 out.add(r);
             }
         } catch (Exception ignored) {
@@ -112,6 +133,7 @@ public final class HistoryStore {
                 o.put("bestCombo", r.bestCombo);
                 o.put("bestResult", r.bestResult);
                 o.put("bestStar", r.bestStar);
+                o.put("guarantee", r.guarantee);
                 arr.put(o);
             }
         } catch (Exception ignored) {

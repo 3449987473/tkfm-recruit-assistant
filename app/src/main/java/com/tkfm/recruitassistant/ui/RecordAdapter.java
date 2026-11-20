@@ -50,7 +50,12 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.Holder> {
         holder.best.setText(record.bestCombo.isEmpty() ? "无匹配结果"
                 : "最佳组合：" + record.bestCombo + "  →  " + record.summary());
         holder.count.setText(record.groupCount + " 组组合 · " + record.characterCount + " 个候选条目");
-        if (record.bestStar > 0) {
+        if (!record.guarantee.isEmpty()) {
+            holder.star.setText(record.guarantee);
+            holder.star.setTextColor(record.guarantee.startsWith("必出") ? Ui.RED : Ui.GOLD);
+            holder.star.setVisibility(View.VISIBLE);
+        } else if (record.bestStar > 0) {
+            // Records written before 1.1.4 only carry the highest star.
             holder.star.setText("最高 " + record.bestStar + "★");
             holder.star.setTextColor(Ui.starColor(record.bestStar));
             holder.star.setVisibility(View.VISIBLE);

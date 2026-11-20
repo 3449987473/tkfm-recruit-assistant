@@ -5,6 +5,7 @@ import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -83,25 +84,36 @@ public class TagPickerView extends LinearLayout {
     }
 
     private void build() {
+        int gap = Ui.dp(getContext(), 6);
         for (String group : catalog.groupOrder()) {
-            LinearLayout header = Ui.horizontal(getContext());
-            header.setPadding(0, Ui.dp(getContext(), 14), 0, Ui.dp(getContext(), 7));
-            TextView title = Ui.text(getContext(), group, 13, Ui.PRIMARY, true);
-            title.setLetterSpacing(0.06f);
-            header.addView(title);
-            TextView rule = Ui.text(getContext(), "  ·  " + catalog.tagsInGroup(group).size() + " 项",
-                    11, Ui.TEXT_DIM, false);
-            header.addView(rule);
-            addView(header);
+            TextView title = Ui.text(getContext(), group, 11,
+                    Ui.withAlpha(Ui.TEXT_DIM, 0xCC), false);
+            title.setLetterSpacing(0.05f);
+            title.setPadding(Ui.dp(getContext(), 2), Ui.dp(getContext(), 13), 0,
+                    Ui.dp(getContext(), 5));
+            addView(title);
 
-            FlowLayout flow = new FlowLayout(getContext());
-            flow.setGap(Ui.dp(getContext(), 7), Ui.dp(getContext(), 7));
-            for (String tag : catalog.tagsInGroup(group)) {
-                TextView button = makeTagButton(tag);
-                flow.addView(button);
-                buttons.add(button);
+            List<String> tags = catalog.tagsInGroup(group);
+            for (int i = 0; i < tags.size(); i += 3) {
+                LinearLayout row = new LinearLayout(getContext());
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                        LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                rowLp.topMargin = gap;
+                for (int j = 0; j < 3; j++) {
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            0, Ui.dp(getContext(), 40), 1);
+                    if (j > 0) lp.setMarginStart(gap);
+                    if (i + j < tags.size()) {
+                        TextView button = makeTagButton(tags.get(i + j));
+                        row.addView(button, lp);
+                        buttons.add(button);
+                    } else {
+                        row.addView(new View(getContext()), lp);
+                    }
+                }
+                addView(row, rowLp);
             }
-            addView(flow);
         }
     }
 
@@ -111,8 +123,7 @@ public class TagPickerView extends LinearLayout {
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         tv.setGravity(Gravity.CENTER);
         tv.setTypeface(Typeface.DEFAULT);
-        tv.setPadding(Ui.dp(getContext(), 12), Ui.dp(getContext(), 7),
-                Ui.dp(getContext(), 12), Ui.dp(getContext(), 7));
+        tv.setPadding(Ui.dp(getContext(), 4), 0, Ui.dp(getContext(), 4), 0);
         tv.setTag(tag);
         tv.setOnClickListener(v -> toggle(tag));
         return tv;
@@ -140,8 +151,8 @@ public class TagPickerView extends LinearLayout {
             button.setTextColor(on ? 0xFFFFFFFF : Ui.TEXT_DIM);
             button.setTypeface(Typeface.DEFAULT, on ? Typeface.BOLD : Typeface.NORMAL);
             button.setBackground(on
-                    ? Ui.rounded(0xFF27365E, Ui.PRIMARY, 10, 1, getContext())
-                    : Ui.ripple(getContext(), Ui.SURFACE_2, Ui.STROKE, 10));
+                    ? Ui.rounded(0xFF2F6DB8, 0xFF5B9BD5, 9, 1, getContext())
+                    : Ui.ripple(getContext(), Ui.SURFACE_2, Ui.STROKE, 9));
             button.setAlpha(on ? 1f : 0.92f);
         }
     }

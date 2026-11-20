@@ -521,6 +521,15 @@ public class AssistantAccessibilityService extends AccessibilityService
 
     // --------------------------------------------------------------------- misc
 
+    /** Called by the settings screen after the floating button options changed. */
+    public void refreshOverlayAppearance() {
+        if (overlay != null) overlay.refreshAppearance();
+    }
+
+    public void resetOverlayPosition() {
+        if (overlay != null) overlay.resetButtonPosition();
+    }
+
     private void finish(String message) {
         busy.set(false);
         if (overlay != null) {

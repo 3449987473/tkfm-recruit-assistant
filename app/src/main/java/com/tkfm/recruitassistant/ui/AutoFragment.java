@@ -33,6 +33,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.tkfm.recruitassistant.AssistantAccessibilityService;
 import com.tkfm.recruitassistant.CaptureService;
 import com.tkfm.recruitassistant.DemoPanelActivity;
+import com.tkfm.recruitassistant.SettingsActivity;
 import com.tkfm.recruitassistant.MainActivity;
 import com.tkfm.recruitassistant.ProjectionService;
 import com.tkfm.recruitassistant.R;
@@ -164,7 +165,7 @@ public class AutoFragment extends Fragment {
         });
         btnBackgroundSettings.setOnClickListener(v -> showBackgroundGuide());
         view.findViewById(R.id.btnAssistantSettings).setOnClickListener(v ->
-                AssistantSettingsDialog.show(requireContext()));
+                startActivity(new Intent(requireContext(), SettingsActivity.class)));
         btnRaw.setOnClickListener(v -> {
             rawVisible = !rawVisible;
             rawCard.setVisibility(rawVisible ? View.VISIBLE : View.GONE);

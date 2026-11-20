@@ -1,9 +1,10 @@
 package com.tkfm.recruitassistant.ui;
 
 import android.content.Context;
-import android.graphics.Typeface;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -37,93 +38,60 @@ public final class ResultsRenderer {
         }
 
         Set<Integer> uniq = new HashSet<>();
-        int maxStar = 0;
         for (MatchGroup g : groups) {
             for (Character c : g.characters) uniq.add(c.no);
-            maxStar = Math.max(maxStar, g.maxStar());
         }
 
         LinearLayout summary = Ui.horizontal(context);
-        summary.setPadding(Ui.dp(context, 2), 0, Ui.dp(context, 2), Ui.dp(context, 8));
-        TextView count = Ui.text(context, groups.size() + " 组组合", 20, Ui.TEXT, true);
-        summary.addView(count);
-        TextView detail = Ui.text(context, "  ·  " + uniq.size() + " 名候选  ·  最高 "
-                + maxStar + "★", 13, Ui.TEXT_DIM, false);
-        summary.addView(detail);
+        summary.setPadding(Ui.dp(context, 2), 0, Ui.dp(context, 2), Ui.dp(context, 7));
+        summary.addView(Ui.text(context, groups.size() + " 组组合", 17, Ui.TEXT, true));
+        summary.addView(Ui.text(context, "  ·  " + uniq.size() + " 名候选", 13,
+                Ui.TEXT_DIM, false));
         container.addView(summary);
 
-        for (int i = 0; i < groups.size(); i++) {
-            MatchGroup group = groups.get(i);
-            container.addView(groupCard(context, group, groups, i + 1, click));
-            Ui.addSpace(container, 9);
+        for (MatchGroup group : groups) {
+            container.addView(groupRow(context, group, groups));
+            Ui.addSpace(container, 7);
         }
     }
 
-    private static View groupCard(Context context, MatchGroup group, List<MatchGroup> allGroups,
-                                  int index, OnCharacterClick click) {
-        LinearLayout card = Ui.vertical(context);
-        card.setPadding(Ui.dp(context, 13), Ui.dp(context, 12), Ui.dp(context, 13),
-                Ui.dp(context, 13));
-        int badgeColor = group.isUnique() ? Ui.RED
-                : group.isRecommended() ? Ui.GREEN : Ui.TEXT_DIM;
+    /** One compact row: tag combo on the left, character list on the right. */
+    private static View groupRow(Context context, MatchGroup group, List<MatchGroup> allGroups) {
         int border = group.isUnique() ? Ui.withAlpha(Ui.RED, 0x66)
                 : group.isRecommended() ? Ui.withAlpha(Ui.GREEN, 0x55) : Ui.STROKE;
-        card.setBackground(Ui.rounded(Ui.SURFACE, border, 16, 1, context));
+        LinearLayout card = Ui.horizontal(context);
+        card.setGravity(Gravity.TOP);
+        card.setPadding(Ui.dp(context, 10), Ui.dp(context, 9), Ui.dp(context, 10),
+                Ui.dp(context, 9));
+        card.setBackground(Ui.rounded(Ui.SURFACE, border, 13, 1, context));
 
-        LinearLayout header = Ui.horizontal(context);
-        TextView badge = Ui.text(context, group.badgeText(), 12, badgeColor, true);
-        badge.setPadding(Ui.dp(context, 8), Ui.dp(context, 3), Ui.dp(context, 8),
-                Ui.dp(context, 3));
-        badge.setBackground(Ui.rounded(Ui.withAlpha(badgeColor, 0x22),
-                Ui.withAlpha(badgeColor, 0x66), 8, 1, context));
-        header.addView(badge);
-
-        TextView star = Ui.text(context, "  最高 " + group.maxStar() + "★", 12,
-                Ui.starColor(group.maxStar()), true);
-        header.addView(star);
-
-        View spacer = new View(context);
-        header.addView(spacer, Ui.lp(0, 1, 1));
-
-        TextView idx = Ui.text(context, "#" + index, 11, Ui.TEXT_DIM, false);
-        header.addView(idx);
-        card.addView(header);
-
-        FlowLayout combos = new FlowLayout(context);
-        combos.setPadding(0, Ui.dp(context, 9), 0, Ui.dp(context, 2));
+        LinearLayout left = Ui.vertical(context);
+        left.setPadding(0, 0, Ui.dp(context, 10), 0);
         for (String tag : group.combo) {
-            TextView pill = Ui.pill(context, tag, 0xFFDCE5FF, 0xFF253158,
-                    Ui.withAlpha(Ui.PRIMARY, 0x88), 8);
-            combos.addView(pill);
+            TextView pill = Ui.pill(context, tag, 0xFFFFFFFF, 0xFF2F6DB8, 0, 6);
+            pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            left.addView(pill);
+            Ui.addSpace(left, 3);
         }
-        card.addView(combos);
+        int badgeColor = group.isUnique() ? Ui.RED
+                : group.isRecommended() ? Ui.GREEN : Ui.TEXT_DIM;
+        TextView badge = Ui.text(context, group.isUnique() ? "必出"
+                        : group.isRecommended() ? "推荐" : group.characters.size() + " 候选",
+                10.5f, badgeColor, group.isUnique() || group.isRecommended());
+        badge.setPadding(0, Ui.dp(context, 2), 0, 0);
+        left.addView(badge);
+        card.addView(left, Ui.lp(Ui.dp(context, 74), ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        FlowLayout chars = new FlowLayout(context);
-        chars.setPadding(0, Ui.dp(context, 7), 0, 0);
+        LinearLayout right = Ui.vertical(context);
         for (Character c : group.characters) {
-            chars.addView(characterChip(context, c, v -> {
-                showCharacter(context, c, group, allGroups);
-            }));
+            TextView row = Ui.text(context, c.star + "★ " + c.name, 12.5f,
+                    Ui.starColor(c.star), c.star >= 2);
+            row.setPadding(0, Ui.dp(context, 3), 0, Ui.dp(context, 3));
+            row.setOnClickListener(v -> showCharacter(context, c, group, allGroups));
+            right.addView(row);
         }
-        card.addView(chars);
+        card.addView(right, Ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         return card;
-    }
-
-    private static TextView characterChip(Context context, Character character,
-                                          View.OnClickListener listener) {
-        int color = Ui.starColor(character.star);
-        TextView tv = new TextView(context);
-        tv.setText(character.star + "★ " + character.name);
-        tv.setTextSize(12.5f);
-        tv.setTextColor(color);
-        tv.setGravity(Gravity.CENTER);
-        tv.setTypeface(Typeface.DEFAULT, character.star >= 2 ? Typeface.BOLD : Typeface.NORMAL);
-        tv.setPadding(Ui.dp(context, 10), Ui.dp(context, 6), Ui.dp(context, 10),
-                Ui.dp(context, 6));
-        tv.setBackground(Ui.ripple(context, Ui.withAlpha(color, 0x18),
-                Ui.withAlpha(color, 0x55), 9));
-        tv.setOnClickListener(listener);
-        return tv;
     }
 
     private static void showCharacter(Context context, Character c, MatchGroup group,

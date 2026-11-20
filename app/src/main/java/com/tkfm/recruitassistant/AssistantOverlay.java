@@ -67,7 +67,8 @@ public class AssistantOverlay {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final int screenWidth;
     private final int screenHeight;
-    private final int buttonSize;
+    private int buttonSize;
+    private int buttonAlpha;
     private final SharedPreferences prefs;
 
     private View buttonView;
@@ -101,7 +102,8 @@ public class AssistantOverlay {
         }
         screenWidth = metrics.widthPixels;
         screenHeight = metrics.heightPixels;
-        buttonSize = dp(52);
+        buttonSize = dp(AssistantSettings.ballSize(context));
+        buttonAlpha = AssistantSettings.ballAlpha(context);
     }
 
     public int getDelayMs() {
@@ -178,6 +180,31 @@ public class AssistantOverlay {
     public void destroy() {
         hideAll();
         removeBanner();
+    }
+
+    /** Rebuilds the floating button after the size/opacity settings changed. */
+    public void refreshAppearance() {
+        boolean visible = buttonAttached;
+        hideButton();
+        buttonView = null;
+        buttonIcon = null;
+        buttonProgress = null;
+        buttonSize = dp(AssistantSettings.ballSize(context));
+        buttonAlpha = AssistantSettings.ballAlpha(context);
+        if (visible) showButton();
+    }
+
+    public void resetButtonPosition() {
+        prefs.edit().remove(KEY_X).remove(KEY_Y).apply();
+        if (buttonView == null || buttonParams == null) return;
+        buttonParams.x = clamp(screenWidth - buttonSize - dp(8), dp(2),
+                screenWidth - buttonSize - dp(2));
+        buttonParams.y = clamp(Math.round(screenHeight * 0.32f), dp(40),
+                screenHeight - buttonSize - dp(60));
+        try {
+            windowManager.updateViewLayout(buttonView, buttonParams);
+        } catch (Exception ignored) {
+        }
     }
 
     public void toast(String text) {
@@ -263,6 +290,7 @@ public class AssistantOverlay {
         bg.setStroke(dp(1), Ui.PRIMARY);
         box.setBackground(bg);
         box.setElevation(dp(8));
+        box.setAlpha(buttonAlpha / 100f);
 
         buttonIcon = new ImageView(context);
         buttonIcon.setImageResource(R.drawable.ic_scan);

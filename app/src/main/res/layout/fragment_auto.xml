@@ -98,7 +98,7 @@
                 android:layout_marginTop="8dp"
                 android:background="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="助手设置（词条 / 时间 / 开始招募）"
+                android:text="设置（助手 / 悬浮窗 / 数据）"
                 android:textColor="@color/primary"
                 android:textSize="12.5sp" />
 

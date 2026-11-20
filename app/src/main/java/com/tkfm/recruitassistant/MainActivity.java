@@ -20,7 +20,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.tkfm.recruitassistant.core.OcrAnalyzer;
 import com.tkfm.recruitassistant.core.TagCatalog;
-import com.tkfm.recruitassistant.ui.AssistantSettingsDialog;
 import com.tkfm.recruitassistant.ui.AutoFragment;
 import com.tkfm.recruitassistant.ui.ManualFragment;
 import com.tkfm.recruitassistant.ui.RecordsFragment;
@@ -94,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
     @Override
     public boolean onMenuItemClick(MenuItem item) {
         if (item.getItemId() == R.id.action_settings) {
-            AssistantSettingsDialog.show(this);
+            startActivity(new Intent(this, SettingsActivity.class));
             return true;
         }
         if (item.getItemId() == R.id.action_rules) {

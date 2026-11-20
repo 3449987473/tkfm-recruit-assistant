@@ -10,6 +10,8 @@ public final class AssistantSettings {
     private static final String KEY_AUTO_RUN_ON_SCAN = "auto_run_on_scan";
     private static final String KEY_AUTO_RECRUIT = "auto_click_recruit";
     private static final String KEY_DELAY = "click_delay_ms";
+    private static final String KEY_BALL_SIZE = "ball_size_dp";
+    private static final String KEY_BALL_ALPHA = "ball_alpha_pct";
 
     private AssistantSettings() {
     }
@@ -35,6 +37,16 @@ public final class AssistantSettings {
         return prefs(context).getInt(KEY_DELAY, 150);
     }
 
+    /** Floating button diameter in dp: 44 / 52 / 60. */
+    public static int ballSize(Context context) {
+        return prefs(context).getInt(KEY_BALL_SIZE, 52);
+    }
+
+    /** Floating button opacity percentage: 100 / 85 / 70. */
+    public static int ballAlpha(Context context) {
+        return prefs(context).getInt(KEY_BALL_ALPHA, 100);
+    }
+
     public static void setAutoRunOnScan(Context context, boolean value) {
         prefs(context).edit().putBoolean(KEY_AUTO_RUN_ON_SCAN, value).apply();
     }
@@ -45,5 +57,13 @@ public final class AssistantSettings {
 
     public static void setDelay(Context context, int value) {
         prefs(context).edit().putInt(KEY_DELAY, value).apply();
+    }
+
+    public static void setBallSize(Context context, int value) {
+        prefs(context).edit().putInt(KEY_BALL_SIZE, value).apply();
+    }
+
+    public static void setBallAlpha(Context context, int value) {
+        prefs(context).edit().putInt(KEY_BALL_ALPHA, value).apply();
     }
 }
