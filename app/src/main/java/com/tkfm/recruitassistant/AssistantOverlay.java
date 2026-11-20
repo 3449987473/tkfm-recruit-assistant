@@ -80,6 +80,10 @@ public class AssistantOverlay {
     private boolean panelAttached;
     private int delayMs;
 
+    private View bannerView;
+    private boolean bannerAttached;
+    private Runnable bannerTimeout;
+
     public AssistantOverlay(Context context, Listener listener, int delayMs) {
         this.context = context;
         this.listener = listener;
@@ -173,6 +177,7 @@ public class AssistantOverlay {
 
     public void destroy() {
         hideAll();
+        removeBanner();
     }
 
     public void toast(String text) {
@@ -187,6 +192,56 @@ public class AssistantOverlay {
             Toast.makeText(context, text, Toast.LENGTH_LONG).show();
         } catch (Exception ignored) {
         }
+    }
+
+    /**
+     * Bottom banner used for the automatic-recruit summary.  Replaces the previous banner
+     * instead of queueing like Toast, so two quick recruits both show their result.
+     */
+    public void showBanner(String text) {
+        removeBanner();
+        TextView view = Ui.text(context, text, 12.5f, Ui.TEXT, false);
+        view.setGravity(Gravity.CENTER);
+        view.setPadding(dp(16), dp(10), dp(16), dp(10));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xF20D1322);
+        bg.setCornerRadius(dp(14));
+        bg.setStroke(dp(1), Ui.STROKE);
+        view.setBackground(bg);
+        view.setElevation(dp(10));
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT);
+        params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        params.y = dp(150);
+        try {
+            windowManager.addView(view, params);
+            bannerView = view;
+            bannerAttached = true;
+        } catch (Exception ignored) {
+        }
+        bannerTimeout = this::removeBanner;
+        main.postDelayed(bannerTimeout, 3000);
+    }
+
+    private void removeBanner() {
+        if (bannerTimeout != null) {
+            main.removeCallbacks(bannerTimeout);
+            bannerTimeout = null;
+        }
+        if (bannerAttached && bannerView != null) {
+            try {
+                windowManager.removeViewImmediate(bannerView);
+            } catch (Exception ignored) {
+            }
+        }
+        bannerAttached = false;
+        bannerView = null;
     }
 
     private void removePanel() {

@@ -367,11 +367,21 @@ public class AssistantAccessibilityService extends AccessibilityService
                 java.util.Collections.singletonList(
                         new AutoSelectPlanner.Tap(startBox.centerX(), startBox.centerY(), "recruit")),
                 () -> complete(group, true, fromScan, true));
+        // Mode 4 keeps the sheet open while selecting.  It covers the in-game recruit button
+        // at the bottom of the screen, so remove it before dispatching that tap.
+        Runnable closeThenRecruit = () -> {
+            if (fromScan) {
+                overlay.hideAll();
+                main.postDelayed(recruitTap, 400);
+            } else {
+                main.postDelayed(recruitTap, 500);
+            }
+        };
         if (recruit && startBox != null) {
             if (plan.taps.isEmpty()) {
-                main.postDelayed(recruitTap, 300);
+                closeThenRecruit.run();
             } else {
-                dispatchTaps(plan.taps, () -> main.postDelayed(recruitTap, 500));
+                dispatchTaps(plan.taps, closeThenRecruit);
             }
         } else {
             dispatchTaps(plan.taps, () -> complete(group, recruit, fromScan, false));
@@ -385,7 +395,7 @@ public class AssistantAccessibilityService extends AccessibilityService
             if (recruit) {
                 // Mode 4: collapse the sheet and report the outcome.
                 overlay.hidePanel();
-                overlay.toastLong(recruited ? group.resultSummary()
+                overlay.showBanner(recruited ? group.resultSummary()
                         : "已选好词条和时间，未找到开始招募按钮，请手动按");
             } else if (lastStartBox != null) {
                 // Mode 2: sheet stays open, the recruit button is the next step.

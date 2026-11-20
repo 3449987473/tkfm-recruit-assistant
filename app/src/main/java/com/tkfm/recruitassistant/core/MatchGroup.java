@@ -39,6 +39,13 @@ public final class MatchGroup {
         return max;
     }
 
+    /** The guarantee the game gives for this combo: it never rolls below the lowest candidate. */
+    public int minStar() {
+        int min = 3;
+        for (Character c : characters) min = Math.min(min, c.star);
+        return min;
+    }
+
     public int countStar(int star) {
         int n = 0;
         for (Character c : characters) if (c.star == star) n++;
@@ -60,17 +67,25 @@ public final class MatchGroup {
         return characters.size() + " 名候选";
     }
 
-    /** One-line outcome shown after a fully automatic recruit. */
+    /**
+     * One-line outcome shown after a fully automatic recruit.  The game rolls at the lowest
+     * candidate's rarity, so 2★ and 3★ get the familiar 必出 SR / SSR wording and lower
+     * rarities are reported as the floor.
+     */
     public String resultSummary() {
         if (characters.isEmpty()) return "没有匹配角色";
+        int star = minStar();
+        String tier = star >= 3 ? "SSR" : star >= 2 ? "SR" : null;
         if (isUnique()) {
             Character only = characters.get(0);
-            String tier = only.star == 3 ? "SSR" : only.star == 2 ? "SR" : only.star + "★";
-            return "已按「必出 " + tier + "：" + only.name + "」组合招募";
+            if (tier != null) {
+                return "已按「必出 " + tier + "：" + only.name + "」组合招募";
+            }
+            return "已按「最低 " + star + "★：" + only.name + "」组合招募";
         }
-        if (isRecommended()) {
-            return "已按「全 SR 以上，" + characters.size() + " 名候选」组合招募";
+        if (tier != null) {
+            return "已按「必出 " + tier + "，" + characters.size() + " 名候选」组合招募";
         }
-        return "已按「最高 " + maxStar() + "★，" + characters.size() + " 名候选」组合招募";
+        return "已按「最低 " + star + "★，" + characters.size() + " 名候选」组合招募";
     }
 }

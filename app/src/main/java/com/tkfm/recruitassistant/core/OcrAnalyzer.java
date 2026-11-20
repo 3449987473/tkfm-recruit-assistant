@@ -451,17 +451,25 @@ public final class OcrAnalyzer {
         if (line == null || line.length() > 8) return null;
         String best = null;
         int bestDistance = Integer.MAX_VALUE;
+        boolean ambiguous = false;
         for (String tag : catalog.allTags()) {
             String alias = catalog.normalize(tag);
-            if (alias.length() < 3) continue;
+            // Two-character tags (支援 / 亚人 / 贫乳) used to be skipped here, so a single
+            // misread such as 支媛 silently dropped the tag from the five.
+            if (alias.length() < 2) continue;
             if (Math.abs(line.length() - alias.length()) > 1) continue;
             int distance = editDistance(line, alias);
-            if (distance <= 1 && distance < bestDistance) {
+            if (distance > 1) continue;
+            if (distance < bestDistance) {
                 bestDistance = distance;
                 best = tag;
+                ambiguous = false;
+            } else if (distance == bestDistance && !tag.equals(best)) {
+                // 贫乳 / 美乳 / 巨乳 are one edit apart; never guess between them.
+                ambiguous = true;
             }
         }
-        return best;
+        return ambiguous ? null : best;
     }
 
     private static int editDistance(String a, String b) {

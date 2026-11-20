@@ -98,7 +98,7 @@ public final class TagCatalog {
         putAliases("保护", "保護", "保护", "保拒", "保户", "保沪");
         putAliases("士兵", "士兵");
         putAliases("防御", "防禦", "防御");
-        putAliases("支援", "支援");
+        putAliases("支援", "支援", "支媛", "支授", "支缓");
         putAliases("爆发力", "爆發力", "爆发力");
         putAliases("生存力", "生存力", "生存カ");
         putAliases("群体攻击", "群體攻擊", "群体攻击", "群體攻击", "群体攻擊",
