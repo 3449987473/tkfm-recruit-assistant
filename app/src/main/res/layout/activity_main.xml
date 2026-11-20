@@ -25,18 +25,68 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
+    <LinearLayout
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
         android:layout_height="54dp"
         android:background="@color/surface"
-        app:itemIconSize="20dp"
-        app:itemPaddingTop="0dp"
-        app:itemPaddingBottom="0.5dp"
-        app:itemTextAppearance="@style/TextAppearance.App.NavLabel"
-        app:itemIconTint="@color/nav_item_color"
-        app:itemTextColor="@color/nav_item_color"
-        app:itemActiveIndicatorStyle="@null"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav" />
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/navAuto"
+            style="@style/NavItem">
+
+            <ImageView
+                android:id="@+id/navAutoIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_scan" />
+
+            <TextView
+                android:id="@+id/navAutoLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/tab_auto"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navManual"
+            style="@style/NavItem">
+
+            <ImageView
+                android:id="@+id/navManualIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_tags" />
+
+            <TextView
+                android:id="@+id/navManualLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/tab_manual"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRecords"
+            style="@style/NavItem">
+
+            <ImageView
+                android:id="@+id/navRecordsIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_history" />
+
+            <TextView
+                android:id="@+id/navRecordsLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/tab_records"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

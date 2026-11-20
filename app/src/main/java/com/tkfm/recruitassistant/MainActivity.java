@@ -7,6 +7,9 @@ import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,7 +20,6 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.tkfm.recruitassistant.core.OcrAnalyzer;
 import com.tkfm.recruitassistant.core.TagCatalog;
 import com.tkfm.recruitassistant.ui.AutoFragment;
@@ -41,7 +43,16 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
     private static final String TAG_MANUAL = "tab_manual";
     private static final String TAG_RECORDS = "tab_records";
 
-    private BottomNavigationView bottomNav;
+    private LinearLayout bottomNav;
+    private LinearLayout navAuto;
+    private LinearLayout navManual;
+    private LinearLayout navRecords;
+    private ImageView navAutoIcon;
+    private ImageView navManualIcon;
+    private ImageView navRecordsIcon;
+    private TextView navAutoLabel;
+    private TextView navManualLabel;
+    private TextView navRecordsLabel;
     private MaterialToolbar toolbar;
     private int current = -1;
     private String pendingCapturePath;
@@ -54,7 +65,18 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
         toolbar.inflateMenu(R.menu.toolbar_main);
         toolbar.setOnMenuItemClickListener(this);
         bottomNav = findViewById(R.id.bottomNav);
-        bottomNav.setOnItemSelectedListener(this::onNavItemSelected);
+        navAuto = findViewById(R.id.navAuto);
+        navManual = findViewById(R.id.navManual);
+        navRecords = findViewById(R.id.navRecords);
+        navAutoIcon = findViewById(R.id.navAutoIcon);
+        navManualIcon = findViewById(R.id.navManualIcon);
+        navRecordsIcon = findViewById(R.id.navRecordsIcon);
+        navAutoLabel = findViewById(R.id.navAutoLabel);
+        navManualLabel = findViewById(R.id.navManualLabel);
+        navRecordsLabel = findViewById(R.id.navRecordsLabel);
+        navAuto.setOnClickListener(v -> showTab(0));
+        navManual.setOnClickListener(v -> showTab(1));
+        navRecords.setOnClickListener(v -> showTab(2));
         showTab(0);
         handleIntent(getIntent());
         requestNotificationPermission();
@@ -73,21 +95,6 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
         super.onNewIntent(intent);
         setIntent(intent);
         handleIntent(intent);
-    }
-
-    private boolean onNavItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.nav_auto) {
-            showTab(0);
-            return true;
-        } else if (id == R.id.nav_manual) {
-            showTab(1);
-            return true;
-        } else if (id == R.id.nav_records) {
-            showTab(2);
-            return true;
-        }
-        return false;
     }
 
     @Override
@@ -200,8 +207,7 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
         return out;
     }
 
-    public void showTab(int index) {
-        if (index == current) {
+    public void showTab(int index) {        if (index == current) {
             if (index == 2 && getRecordsFragment() != null) getRecordsFragment().refresh();
             return;
         }
@@ -233,10 +239,7 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
         ft.commit();
         fm.executePendingTransactions();
         current = index;
-        if (bottomNav != null) {
-            int item = index == 0 ? R.id.nav_auto : index == 1 ? R.id.nav_manual : R.id.nav_records;
-            if (bottomNav.getSelectedItemId() != item) bottomNav.setSelectedItemId(item);
-        }
+        updateNavSelection(index);
         if (toolbar != null) {
             toolbar.setSubtitle(index == 0 ? "自动识别 · 屏幕 OCR" : index == 1
                     ? "手动计算 · 1~3 项组合" : "招募记录 · 本机保存");
@@ -246,6 +249,18 @@ public class MainActivity extends AppCompatActivity implements MaterialToolbar.O
             getAutoFragment().openCapturedImage(pendingCapturePath);
             pendingCapturePath = null;
         }
+    }
+
+    private void updateNavSelection(int index) {
+        applyNav(navAutoIcon, navAutoLabel, index == 0);
+        applyNav(navManualIcon, navManualLabel, index == 1);
+        applyNav(navRecordsIcon, navRecordsLabel, index == 2);
+    }
+
+    private static void applyNav(ImageView icon, TextView label, boolean selected) {
+        int color = selected ? 0xFF7C9CFF : 0xFF6C7798;
+        if (icon != null) icon.setColorFilter(color);
+        if (label != null) label.setTextColor(color);
     }
 
     public void loadManualTags(List<String> tags) {
